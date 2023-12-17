@@ -124,7 +124,7 @@ names = {'4sinl': 'Носатый', 'duck_malish': 'тупой сынок шлю
          'aiioe': 'мой псевдосоздатель', 'barigaavito': 'валесос с копьем',
          'soosya': 'кумар', 'default': 'бомж задристанный'}
 
-mp3save("leave", "сосите мои яйца спермоиды", "ru")
+mp3save("leave", "пока", "ru")
 
 
 @client.user_command(force_global=True)
@@ -381,7 +381,6 @@ async def play1(interaction: Interaction):
         channel_name = info.get('uploader', None)
         video_duration = info.get('duration_string', None)
         thumbnail_url = info.get('thumbnails', [{}])[27].get('url', nextcord.Embed.Empty)
-        print(info)
     voice = get(client.voice_clients, guild=interaction.guild)
     if not voice or not voice.is_connected():
         voice = await join_voice_channel(interaction)
@@ -546,26 +545,26 @@ async def say(interaction: Interaction, args):
 @client.slash_command(name="shout", description="Ask to shout something.", force_global=True)
 async def shout(interaction: Interaction, args):
     name = str(interaction.message.author).split("#")[0]
-    action = ['говорит', 'спизданул', 'высрал', 'пишет'][random.randint(0, 3)]
+    action = ['говорит', 'высказал', 'выделил', 'пишет'][random.randint(0, 3)]
 
     await speech_join(interaction, "say_ru",
                       names.get(name, "default") + ' ' + action + ': ' + args,
                       "ru")
 
 
-@client.slash_command(name="скажи_по_немецки", description="Ask to shout something on german.", force_global=True)
+@client.slash_command(name="say_german", description="Ask to shout something on german.", force_global=True)
 async def say_de(interaction: Interaction, args):
     await interaction.send("Говорю...", ephemeral=True)
     await speech_join(interaction, "say_de", args, "de")
 
 
-@client.slash_command(name="скажи_по_украински", description="Ask to shout something on ukrainian.", force_global=True)
+@client.slash_command(name="say_ukrainian", description="Ask to shout something on ukrainian.", force_global=True)
 async def say_uk(interaction: Interaction, args):
     await interaction.send("Говорю...", ephemeral=True)
     await speech_join(interaction, "say_uk", args, "uk")
 
 
-@client.slash_command(name="скажи_по_вьетнамски", description="Ask to shout something on vietnamese.", force_global=True)
+@client.slash_command(name="say_vietnamese", description="Ask to shout something on vietnamese.", force_global=True)
 async def say_vi(interaction: Interaction, args):
     await interaction.send("Говорю...", ephemeral=True)
     await speech_join(interaction, "say_vi", args, "vi")
