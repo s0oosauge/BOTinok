@@ -9,11 +9,28 @@ import gtts
 import random
 import time
 import logging
+import sqlite3
 
 
 #logging.basicConfig(level=logging.INFO)
 file = open("TOKEN.txt", 'r')
 TOKEN = file.read()
+
+
+conn = sqlite3.connect('song_database.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS songs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    song_title TEXT,
+    video_url TEXT,
+    UNIQUE(user_id, video_url)
+);
+
+''')
+conn.commit()
 
 
 def mp3save(name, text, lang):
@@ -105,6 +122,21 @@ class ActionButtons(nextcord.ui.View):
         await interaction.response.send_modal(AddToQueue_Modal())
 
 
+class Dropdown(nextcord.ui.Select):
+    def __init__(self, song_choices):
+        super().__init__(placeholder="Choose a song to play", options=song_choices, custom_id="my_songs_select")
+
+    async def callback(self, interaction: Interaction):
+        if self.values[0]:
+            await play(interaction, self.values[0])
+
+
+class DropdownView(nextcord.ui.View):
+    def __init__(self, song_choices):
+        super().__init__()
+        self.add_item(Dropdown(song_choices))
+
+
 client = commands.Bot(command_prefix='/', intents=nextcord.Intents.all())
 
 FFMPEG_OPTIONS = {
@@ -120,9 +152,8 @@ YTDLP_OPTIONS = {
     }],
 }
 
-names = {'4sinl': 'Носатый', 'duck_malish': 'тупой сынок шлюхи',
-         'aiioe': 'мой псевдосоздатель', 'barigaavito': 'валесос с копьем',
-         'soosya': 'кумар', 'default': 'бомж задристанный'}
+names = {'4sinl': 'Носатый', 'aiioe': 'мой псевдосоздатель', 'barigaavito': 'валесос с копьем',
+         'soosya': 'кумар', 'default': 'бомж'}
 
 mp3save("leave", "пока", "ru")
 
@@ -149,67 +180,130 @@ async def help(interaction: Interaction):
     embed = nextcord.Embed(
         title="Bot Commands",
         description="Here is a list of available commands:",
-        color=0xFF00FF
+        color=0x4EA6DA
     )
 
     embed.add_field(
-        name="/hello [arg]",
-        value="Greet the bot",
+        name="/play [query]",
+        value="Plays a song",
         inline=False
+    )
+
+    embed.add_field(
+        name="/skip",
+        value="Skips the current track",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/previous",
+        value="Plays the previous track",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/loop_queue",
+        value="Loops the queue",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/loop_song",
+        value="Loops the current song",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/my_songs",
+        value="Displays songs queued by the user",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/nowplaying",
+        value="Displays the song that is currently playing",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/pause",
+        value="Pauses the current song",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/resume",
+        value="Resumes the current song",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/queue",
+        value="Displays the current queue",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/clear",
+        value="Clears all the songs in the queue",
+        inline=False
+
+    )
+
+    embed.add_field(
+        name="/clean [messages]",
+        value="Clean up bot messages",
+        inline=False
+
     )
 
     embed.add_field(
         name="/join",
-        value="Join the voice channel",
+        value="Joins your voice channel",
         inline=False
+
     )
 
     embed.add_field(
         name="/leave",
-        value="Leave the voice channel",
+        value="Leaves your voice channel",
         inline=False
+
     )
 
     embed.add_field(
-        name="/спой [url]",
-        value="Add a song to the queue",
+        name="/ping",
+        value="Displays the bot's latency",
         inline=False
+
     )
 
     embed.add_field(
-        name="/скажи [args]",
-        value="Make the bot say something",
+        name="/say [args]",
+        value="Asks to say something",
         inline=False
+
     )
 
     embed.add_field(
-        name="/крикни [args]",
-        value="Make the bot shout something",
+        name="/say_german [args]",
+        value="Asks to shout something in german",
         inline=False
+
     )
 
     embed.add_field(
-        name="/адольф_крикни [args]",
-        value="Make the bot shout something in German",
+        name="/say_ukrainian [args]",
+        value="Asks to shout something in ukrainian",
         inline=False
+
     )
 
     embed.add_field(
-        name="/хохол_крикни [args]",
-        value="Make the bot shout something in Ukrainian",
+        name="/say_vietnamese [args]",
+        value="Asks to shout something in vietnamese",
         inline=False
-    )
 
-    embed.add_field(
-        name="/серёга_крикни [args]",
-        value="Make the bot shout something in Vietnamese",
-        inline=False
-    )
-
-    embed.add_field(
-        name="/help",
-        value="Display this help message",
-        inline=False
     )
 
     await interaction.response.send_message(embed=embed)
@@ -221,12 +315,8 @@ async def on_ready():
 
 
 @client.event
-async def on_message(message):
-    # Check if the message is a command and if the channel is in the ignored_channels set
-    if message.content.startswith('/') and message.channel.id in ignored_channels:
-        return  # Ignore commands in the specified channel
-
-    await client.process_commands(message)  # Process commands as usual
+async def on_disconnect():
+    conn.close()
 
 
 @client.slash_command(name="hello", description="Greets you well", force_global=True)
@@ -283,7 +373,7 @@ async def leave(interaction: Interaction):
         await interaction.send("I'm not currently in a voice channel.", ephemeral=True)
 
 
-ignored_channels = set()  # Set to store ignored channels
+ignored_channels = set()
 
 
 @client.slash_command(name="ignore", description="Ignore commands in a specific channel", force_global=True)
@@ -326,34 +416,61 @@ async def clean(interaction: Interaction, messages: int = 100):
 
 q = []
 queue_list = []
-prev_songs = []
 index = 0
 is_previous = False
 is_paused = False
 is_looped = 0
 
 
+@client.slash_command(name="my_songs", description="Display songs queued by the user", force_global=True)
+async def my_songs(interaction: Interaction):
+
+    cursor.execute("SELECT id, song_title, video_url FROM songs WHERE user_id = ?", (interaction.user.id,))
+    songs = cursor.fetchall()
+
+    if songs:
+        song_choices = [
+            nextcord.SelectOption(label=title, value=url) for song_id, title, url in songs
+        ]
+
+        view = DropdownView(song_choices)
+
+        await interaction.send(f"Select a song to play from {interaction.user.mention} requests:", view=view)
+    else:
+        await interaction.send("You haven't queued any songs yet.", ephemeral=True)
+
+
 @client.slash_command(name="play", description="Plays a song.", force_global=True)
 async def play(interaction: Interaction, query: str = nextcord.SlashOption(name="query",
                                                                            description="The query to search for.",
-                                                                           choices=prev_songs)):
-    global prev_songs
-    await interaction.send("Searching...", ephemeral=True)
-    if "http" in query:
-        q.append(query)
+                                                                           required=True)):
+    if interaction.user.voice:
+        if "http" in query:
+            await interaction.send("Adding...", ephemeral=True)
+            q.append(query)
+        else:
+            await interaction.send("Searching...", ephemeral=True)
+            await search_and_add_to_queue(interaction, query)
+
+        video_title, video_duration, video_author = get_video_title(q[len(q) - 1])
+
+        try:
+            cursor.execute("INSERT INTO songs (user_id, song_title, video_url) VALUES (?, ?, ?)",
+                           (interaction.user.id, video_title, q[len(q) - 1]))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            print("Песня уже существует в базе данных для этого пользователя.")
+
+        queue_list.append(f"[{video_title}]({q[len(q) - 1]}) [{video_duration}] • {interaction.user.mention}")
+
+        embed = nextcord.Embed(description=f"Queued {video_title} [{video_duration}] • {interaction.user.mention}",
+                               color=0x4EA6DA)
+        await interaction.send(embed=embed)
+
+        if len(q) == 1:
+            await play1(interaction)
     else:
-        await search_and_add_to_queue(interaction, query)
-
-    video_title, video_duration = get_video_title(q[len(q)-1])
-
-    prev_songs.append(video_title)
-
-    queue_list.append(f"[{video_title}]({q[len(q)-1]}) [{video_duration}] • @{interaction.user.global_name}")
-
-    await interaction.send(f"``Queued {video_title} [{video_duration}] • @{interaction.user.global_name}``")
-
-    if len(q) == 1:
-        await play1(interaction)
+        await interaction.send("You need to be in a voice channel to use this command.", ephemeral=True)
 
 
 # Функция для поиска и добавления песни в очередь по ключевым словам
@@ -450,7 +567,8 @@ def get_video_title(video_url: str) -> str:
         info = ydl.extract_info(video_url, download=False)
         video_title = info.get('title', None)
         video_duration = info.get('duration_string', None)
-        return video_title, video_duration
+        video_author = info.get('uploader', None)
+        return video_title, video_duration, video_author
 
 
 @client.slash_command(name="clear", description="Clears all the song in the queue", force_global=True)
@@ -462,8 +580,8 @@ async def clear(interaction: Interaction):
                                ephemeral=True)
         return
 
-    q = []
-    queue_list = []
+    q = [q[0]]
+    queue_list = [queue_list[0]]
     index = 0
     is_previous = False
     is_paused = False
@@ -479,7 +597,7 @@ async def pause(interaction: Interaction):
     if voice and voice.is_playing():
         voice.pause()
         is_paused = True
-        await interaction.response.send_message(f"Music is paused by {interaction.user.global_name}.")
+        await interaction.response.send_message(f"Music is paused by {interaction.user.mention}.")
     else:
         await interaction.response.send_message("No music is currently playing.", ephemeral=True)
 
@@ -492,7 +610,7 @@ async def resume(interaction: Interaction):
     if voice and voice.is_paused():
         voice.resume()
         is_paused = False
-        await interaction.response.send_message(f"Music is resumed by {interaction.user.global_name}.")
+        await interaction.response.send_message(f"Music is resumed by {interaction.user.mention}.")
     else:
         await interaction.response.send_message("The music is not paused.")
 
@@ -504,11 +622,11 @@ async def skip(interaction: Interaction):
 
     if voice and voice.is_playing():
         voice.stop()
-        await interaction.response.send_message(f"Current track is skipped by {interaction.user.global_name}.")
+        await interaction.response.send_message(f"Current track is skipped by {interaction.user.mention}.")
     elif is_paused and index < len(q)-1:
         voice.resume()
         voice.stop()
-        await interaction.response.send_message(f"Current track is skipped by {interaction.user.global_name}.")
+        await interaction.response.send_message(f"Current track is skipped by {interaction.user.mention}.")
         is_paused = False
     else:
         await interaction.response.send_message("No music is currently playing.")
@@ -522,15 +640,63 @@ async def previous(interaction: Interaction):
     if voice and voice.is_playing() and index > 0:
         is_previous = True
         voice.stop()
-        await interaction.response.send_message(f"Backing up to the previous track by {interaction.user.global_name}.")
+        await interaction.response.send_message(f"Backing up to the previous track by {interaction.user.mention}.")
     elif is_paused and index > 0:
         is_previous = True
         voice.resume()
         voice.stop()
-        await interaction.response.send_message(f"Backing up to the previous track by {interaction.user.global_name}.")
+        await interaction.response.send_message(f"Backing up to the previous track by {interaction.user.mention}.")
         is_paused = False
     else:
         await interaction.response.send_message("There is no previous song.", ephemeral=True)
+
+
+@client.slash_command(name="loop_queue", description="Loops the queue.", force_global=True)
+async def loop_queue(interaction: Interaction):
+    global is_looped, q
+    if q:
+        is_looped = 1
+        await interaction.send("The queue is looped now.",
+                               ephemeral=True)
+    else:
+        await interaction.send("There are no songs currently playing, please play a song to use the command.",
+                               ephemeral=True)
+
+
+@client.slash_command(name="loop_song", description="Loops the current song.", force_global=True)
+async def loop_song(interaction: Interaction):
+    global is_looped, q
+    if q:
+        is_looped = 2
+        await interaction.send("The current song is looped now.",
+                               ephemeral=True)
+    else:
+        await interaction.send("There are no songs currently playing, please play a song to use the command.",
+                               ephemeral=True)
+
+
+@client.slash_command(name="nowplaying", description="Displays the song that is currently playing.", force_global=True)
+async def nowplaying(interaction: Interaction):
+    global index, q
+    if q:
+        url = q[index]
+        with ytdlp.YoutubeDL(YTDLP_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
+            video_title = info.get('title', None)
+            channel_name = info.get('uploader', None)
+            video_duration = info.get('duration_string', None)
+            thumbnail_url = info.get('thumbnails', [{}])[27].get('url', nextcord.Embed.Empty)
+        embed = nextcord.Embed(
+            title=f"**{video_title}**",
+            description=f"by {channel_name}\nDuration - [{video_duration}]",
+            color=0x4EA6DA
+        )
+        embed.set_thumbnail(url=thumbnail_url)
+
+        await interaction.send(embed=embed)
+    else:
+        await interaction.send("There are no songs currently playing, please play a song to use the command.",
+                               ephemeral=True)
 
 
 @client.slash_command(name="say", description="Ask to say something.", force_global=True)
