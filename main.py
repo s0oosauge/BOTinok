@@ -311,7 +311,7 @@ async def help(interaction: Interaction):
 
 @client.event
 async def on_ready():
-    print('Bot connected')
+    print('BOTinok is ready')
 
 
 @client.event
