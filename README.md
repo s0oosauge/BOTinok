@@ -28,14 +28,20 @@ Requirements for BOTinok to run:
 ### Installing
 
 Clone the repo on your machine
-```git clone https://github.com/s0oosauge/BOTinok```
+
+    git clone https://github.com/s0oosauge/BOTinok
 
 Create file "TOKEN.txt" and put your discord bot token in it.
 
 ### Deployment
 
 To deploy the bot simply run:
-```bash python bot.py```
+
+    bash python bot.py
+
+If you installed and setup eveything correctly then the bot should output this message:
+
+    BOTinok is ready
 
 ## Authors
 
