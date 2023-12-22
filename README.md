@@ -8,7 +8,7 @@ BOTinok is a discord bot written in Python using the [nextcord](https://github.c
 
 ## Add to Discord
 
-Click [here](https://discord.com/api/oauth2/authorize?client_id=1182345632086761674&permissions=8&scope=bot) to invite BOTinok to your server.
+Click [here](https://discord.com/api/oauth2/authorize?client_id=1152418297539727503&permissions=8&scope=bot) to invite BOTinok to your server.
 
 A detailed list of commands can be shown by using /help command.
 
@@ -45,6 +45,6 @@ If you installed and setup eveything correctly then the bot should output this m
 
 ## Authors
 
-- VladiValera: project manager
+- [VladiValera](https://github.com/KhitrovValera): project manager
 - [soosya](https://github.com/s0oosauge): coding and design
-- AIIOE: coding
+- [AIIOE](https://github.com/Alloxes): coding
