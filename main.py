@@ -13,7 +13,7 @@ import sqlite3
 
 
 #logging.basicConfig(level=logging.INFO)
-file = open("TOKEN.txt", 'r')
+file = open("TOKEN1.txt", 'r')
 TOKEN = file.read()
 
 
@@ -132,8 +132,8 @@ class Dropdown(nextcord.ui.Select):
 
 
 class DropdownView(nextcord.ui.View):
-    def __init__(self, song_choices):
-        super().__init__()
+    def __init__(self, song_choices, timeout: float = None):
+        super().__init__(timeout=timeout)
         self.add_item(Dropdown(song_choices))
 
 
@@ -360,11 +360,16 @@ async def join(interaction: Interaction):
 
 @client.slash_command(name="leave", description="Leaves your voice channel", force_global=True)
 async def leave(interaction: Interaction):
+    global q, queue_list, index, is_previous, is_paused, is_looped
 
     voice = get(client.voice_clients, guild=interaction.guild)
 
-    if voice and voice.is_playing():
-        voice.stop()
+    q = []
+    queue_list = []
+    index = 0
+    is_previous = False
+    is_paused = False
+    is_looped = 0
 
     if voice and voice.is_connected():
         await voice.disconnect()
@@ -378,19 +383,11 @@ ignored_channels = set()
 
 @client.slash_command(name="ignore", description="Ignore commands in a specific channel", force_global=True)
 async def ignore_channel(interaction: Interaction, channel: nextcord.TextChannel):
-    """
-    Ignores commands in the specified channel.
 
-    Parameters:
-    - channel: The channel to ignore commands in.
-    """
-    # Check if the user has the manage_channels permission
     if interaction.guild and interaction.channel.permissions_for(interaction.user).manage_channels:
-        # Add the channel to the set of ignored channels
         ignored_channels.add(channel.id)
         await interaction.response.send_message(f"Commands will now be ignored in {channel.mention}.")
     else:
-        # User doesn't have the necessary permissions
         await interaction.response.send_message("You don't have the required permissions to use this command.",
                                                 ephemeral=True)
 
@@ -560,6 +557,64 @@ async def show_queue(interaction: Interaction):
     )
 
     await interaction.send(embed=embed)
+
+
+@client.slash_command(name="shuffle", description="Shuffles the songs in the queue", force_global=True)
+async def shuffle(interaction: Interaction):
+    global q, queue_list, index, is_previous, is_paused
+    voice = get(client.voice_clients, guild=interaction.guild)
+    if voice and voice.is_playing():
+        voice.pause()
+        await interaction.send("Shuffled the queue. Now playing:")
+
+    if not q:
+        await interaction.send("There are no songs currently playing, please play a song to use the command.",
+                               ephemeral=True)
+        return
+
+    random.shuffle(q)
+    index = 0
+    queue_list = []
+    is_previous = False
+    is_paused = False
+
+    await play1(interaction)
+    for i in range(0, len(q)):
+        video_title, video_duration, video_author = get_video_title(q[i])
+        queue_list.append(f"[{video_title}]({q[i]}) [{video_duration}] • {interaction.user.mention}")
+
+
+@client.slash_command(name="play_something", description="Shuffles the user's queued songs", force_global=True)
+async def play_something(interaction: Interaction, amount: int = 5):
+    global q, queue_list, index, is_previous, is_paused
+    voice = get(client.voice_clients, guild=interaction.guild)
+    if voice and voice.is_playing():
+        voice.pause()
+        await interaction.send("Shuffled the queries.")
+
+    cursor.execute("SELECT id, song_title, video_url FROM songs WHERE user_id = ?", (interaction.user.id,))
+    songs = cursor.fetchall()
+
+    if not songs:
+        await interaction.send("You haven't queued any songs yet.", ephemeral=True)
+        return
+
+    song_urls = [song[2] for song in songs]
+    random.shuffle(song_urls)
+
+    q.clear()
+    q.extend(song_urls[:amount])
+
+    index = 0
+    is_previous = False
+    is_paused = False
+    queue_list = []
+
+    await play1(interaction)
+
+    for i in range(0, len(q)):
+        video_title, video_duration, video_author = get_video_title(q[i])
+        queue_list.append(f"[{video_title}]({q[i]}) [{video_duration}] • {interaction.user.mention}")
 
 
 def get_video_title(video_url: str) -> str:
